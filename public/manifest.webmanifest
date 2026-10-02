@@ -1,0 +1,10 @@
+{
+  "name": "Rummi",
+  "short_name": "Rummi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#172523",
+  "theme_color": "#172523",
+  "orientation": "any",
+  "description": "A live local-network Rummikub-style tabletop game."
+}

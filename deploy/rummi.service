@@ -1,0 +1,22 @@
+[Unit]
+Description=Rummi local-network game server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rummi
+Group=rummi
+WorkingDirectory=/opt/rummi
+Environment=NODE_ENV=production
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Environment=DATA_DIR=/opt/rummi/data
+ExecStart=/usr/bin/env node /opt/rummi/dist-server/server/index.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
