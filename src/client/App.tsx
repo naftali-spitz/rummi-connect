@@ -111,6 +111,16 @@ export default function App() {
       onReady={simple('turn:ready')}
       onOpenSettings={() => setSettingsOpen(true)}
     />
-    <SettingsPanel open={settingsOpen} theme={theme} prefs={prefs} onTheme={setTheme} onPrefs={setPrefs} onClose={() => setSettingsOpen(false)} />
+    <SettingsPanel
+      open={settingsOpen}
+      theme={theme}
+      prefs={prefs}
+      isHost={room.hostDeviceId === deviceId}
+      onTheme={setTheme}
+      onPrefs={setPrefs}
+      onRestartGame={() => emitAck('game:restart', {})}
+      onNewGame={() => emitAck('game:lobby', {})}
+      onClose={() => setSettingsOpen(false)}
+    />
   </>;
 }
