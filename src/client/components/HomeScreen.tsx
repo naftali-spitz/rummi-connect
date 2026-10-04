@@ -16,7 +16,7 @@ export function HomeScreen({ busy, error, language, onLanguage, onCreate, onJoin
   const [code, setCode] = useState(() => new URLSearchParams(location.search).get('room')?.replace(/\D/g, '').slice(0, 6) || '');
 
   const remember = () => {
-    const clean = name.trim() || 'Player';
+    const clean = name.trim() || (language === 'he' ? 'שחקן' : 'Player');
     localStorage.setItem('rummi-name', clean);
     return clean;
   };
