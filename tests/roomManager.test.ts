@@ -32,6 +32,40 @@ describe('room manager', () => {
     expect(m.deviceState(created.roomCode, created.deviceId)?.privateTurn?.rack.filter(Boolean)).toHaveLength(14);
   });
 
+  it('restarts an active game with the same players and fresh tiles', () => {
+    const { manager: m } = manager();
+    const created = m.createRoom('host', 'Host').data!;
+    m.joinRoom(created.roomCode, 'remote', 'playing', 'Remote');
+    expect(m.startGame(created.roomCode, created.deviceId).ok).toBe(true);
+    const before = m.getRoom(created.roomCode)!;
+    const playerIds = before.players.map((p) => p.id);
+    const firstRack = before.players[0].rack.filter(Boolean);
+
+    expect(m.restartGame(created.roomCode, created.deviceId).ok).toBe(true);
+    const after = m.getRoom(created.roomCode)!;
+    expect(after.status).toBe('playing');
+    expect(after.players.map((p) => p.id)).toEqual(playerIds);
+    expect(after.players.map((p) => p.rack.filter(Boolean).length)).toEqual([14, 14]);
+    expect(after.pool.length).toBe(78);
+    expect(after.table).toEqual([]);
+    expect(after.players[0].rack.filter(Boolean)).not.toEqual(firstRack);
+  });
+
+  it('lets the host abandon an active game and return everyone to the lobby', () => {
+    const { manager: m } = manager();
+    const created = m.createRoom('host', 'Host').data!;
+    m.joinRoom(created.roomCode, 'remote', 'playing', 'Remote');
+    expect(m.startGame(created.roomCode, created.deviceId).ok).toBe(true);
+
+    expect(m.returnToLobby(created.roomCode, created.deviceId).ok).toBe(true);
+    const room = m.getRoom(created.roomCode)!;
+    expect(room.status).toBe('lobby');
+    expect(room.turn).toBeNull();
+    expect(room.table).toEqual([]);
+    expect(room.pool).toEqual([]);
+    expect(room.players.map((p) => p.rack.filter(Boolean).length)).toEqual([0, 0]);
+  });
+
   it('accepts a deterministic 33-point opening run', () => {
     const { manager: m } = manager();
     const created = m.createRoom('a', 'A').data!;
