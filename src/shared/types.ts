@@ -46,6 +46,7 @@ export interface TurnState {
   rack: RackSlots;
   originalRackTileIds: string[];
   history: TurnSnapshot[];
+  future: TurnSnapshot[];
 }
 
 export interface PersistedRoom {

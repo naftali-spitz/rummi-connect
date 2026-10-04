@@ -225,3 +225,126 @@ button.primary{background:#244f48;color:white;box-shadow:0 3px 0 #173832}.big{mi
     filter:brightness(1.08);
   }
 }
+
+
+/* Feedback pass: Joker, accessibility, Hebrew and touch-first phone layout */
+.home-card{position:relative}
+.home-language{position:absolute;top:16px;inset-inline-end:16px;display:flex;gap:4px;background:#eceee9;padding:3px;border-radius:9px}
+.home-language button{padding:5px 8px;min-height:0;font-size:11px;background:transparent}
+.home-language button.active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.language-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:6px}
+.language-grid button.active{background:#dfece7;box-shadow:inset 0 0 0 1px #4e7d74}
+.colorblind-toggle>span{display:flex;flex-direction:column;gap:3px;padding-inline-end:12px}
+.colorblind-toggle small{font-size:10px;font-weight:500;color:#737a77;line-height:1.35}
+
+.game-tile{transition:transform .16s ease,box-shadow .16s ease,opacity .12s,margin .12s ease}
+.game-tile.joker{
+  color:#6a3aa0;
+  border:2px solid #7a4caf;
+  background:radial-gradient(circle at 50% 24%,#fff7c9 0 18%,var(--tile1) 44%,var(--tile2) 100%);
+  box-shadow:0 2px 0 #5d397f,0 4px 9px rgba(62,26,89,.34),inset 0 0 0 2px rgba(255,220,91,.4);
+}
+.joker-mark{width:78%;height:78%;display:grid;place-items:center;filter:drop-shadow(0 1px 0 rgba(255,255,255,.8))}
+.joker-mark svg{width:100%;height:100%;overflow:visible;fill:#7a4caf;stroke:#3b2453;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.joker-mark svg circle{fill:#e7b735;stroke:#6f4b13}
+.joker-mark svg path:last-child{stroke:#3b2453;stroke-width:2.5}
+
+.colorblind-mode .game-tile i{
+  margin-top:3px;
+  font-size:calc(var(--tw)*.32);
+  font-weight:1000;
+  line-height:.9;
+  color:#15191c;
+  text-shadow:0 1px 0 rgba(255,255,255,.85);
+}
+.colorblind-mode .game-tile.black{border:3px solid #24272b}
+.colorblind-mode .game-tile.blue{border:3px double #24272b}
+.colorblind-mode .game-tile.red{border:3px dashed #24272b}
+.colorblind-mode .game-tile.orange{border:3px dotted #24272b}
+.colorblind-mode .game-tile.joker{border:3px solid #6a3aa0}
+
+.game-tile.snap-before{margin-left:calc(var(--tw)*.48)}
+.game-tile.snap-after{margin-right:calc(var(--tw)*.48)}
+.rack-slot.snap-hover{outline-width:4px}
+.drag-ghost{transform-origin:center}
+.drag-ghost .game-tile{transform:scale(1.16);box-shadow:0 16px 24px rgba(0,0,0,.36)}
+.touch-bubble .game-tile{transform:scale(1.05)}
+.meld,.rack-grid,.drag-ghost,.remote-drag{direction:ltr}
+
+html[dir="rtl"] .player-main,html[dir="rtl"] .results-card,html[dir="rtl"] .settings-panel{text-align:right}
+html[dir="rtl"] .score-row{text-align:right}
+html[dir="rtl"] .score-row b{text-align:left}
+html[dir="rtl"] .home-card{text-align:right}
+html[dir="rtl"] .room-code,html[dir="rtl"] .room-code-input{direction:ltr}
+
+@media (max-width:650px){
+  .game-shell:not(.display-mode){
+    --tw:40px;
+    --th:56px;
+    --gap:3px;
+    grid-template-rows:40px minmax(0,1fr) auto;
+  }
+  .game-hud{min-height:40px;padding:0 6px;gap:5px}
+  .hud-icon{min-width:36px;min-height:34px;font-size:18px}
+  .player-chip{font-size:11px;padding:4px 7px}
+  .table-surface{padding:8px 6px;overscroll-behavior:contain}
+  .meld-wrap{gap:10px 9px;padding-bottom:48px}
+  .meld{padding:5px;min-height:calc(var(--th) + 10px)}
+  .turn-badge{font-size:11px;bottom:6px;left:6px}
+  .rack-panel{max-height:45dvh;padding:6px 6px max(6px,env(safe-area-inset-bottom));overflow:hidden}
+  .rack-grid{
+    grid-template-columns:repeat(14,var(--tw));
+    grid-template-rows:repeat(2,var(--th));
+    grid-auto-columns:var(--tw);
+    grid-auto-rows:var(--th);
+    grid-auto-flow:row;
+    justify-content:start;
+    align-content:start;
+    min-height:calc(var(--th)*2 + 7px);
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding:5px;
+    gap:7px 5px;
+    touch-action:pan-x;
+    overscroll-behavior-x:contain;
+    scrollbar-width:thin;
+  }
+  .rack-slot{scroll-snap-align:start}
+  .rack-controls{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:5px;
+    padding-top:6px;
+  }
+  .rack-controls button{
+    min-width:0;
+    min-height:42px;
+    padding:5px 4px;
+    font-size:11px;
+    line-height:1.05;
+    white-space:normal;
+  }
+  .rack-spacer,.rack-owner{display:none}
+  .rack-controls .draw-btn{background:rgba(255,255,255,.22)}
+  .rack-controls .done-btn{padding-inline:4px}
+  .selection-tools{bottom:calc(206px + env(safe-area-inset-bottom))}
+  .toast{top:48px}
+  .new-meld-hint{font-size:12px;padding:8px 11px}
+}
+
+@media (max-width:390px){
+  .game-shell:not(.display-mode){--tw:38px;--th:54px}
+  .rack-controls button{font-size:10px;min-height:40px}
+  .selection-tools{bottom:calc(198px + env(safe-area-inset-bottom))}
+}
+
+/* Keep landscape phones compact while retaining larger touch targets. */
+@media (orientation:landscape) and (max-height:560px){
+  .game-shell:not(.display-mode){--tw:38px;--th:53px}
+  .rack-panel{overflow:auto}
+  .rack-controls{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .rack-controls button{min-height:34px;font-size:10px;padding:4px}
+  .selection-tools{bottom:12px}
+}

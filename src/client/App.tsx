@@ -8,6 +8,7 @@ import { ResultsScreen } from './components/ResultsScreen';
 import { SettingsPanel, type ThemeName } from './components/SettingsPanel';
 import type { FeedbackPrefs } from './feedback';
 import { randomUUID } from './utils';
+import type { Language } from './i18n';
 
 interface AckData { roomCode: string; deviceId: string; playerId?: string }
 
@@ -19,6 +20,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeName>(() => (localStorage.getItem('rummi-theme') as ThemeName) || 'soft');
+  const [language, setLanguage] = useState<Language>(() => localStorage.getItem('rummi-language') === 'he' ? 'he' : 'en');
+  const [colorBlind, setColorBlind] = useState(() => localStorage.getItem('rummi-colorblind') === 'on');
   const [prefs, setPrefs] = useState<FeedbackPrefs>(() => ({
     sound: localStorage.getItem('rummi-sound') !== 'off',
     haptics: localStorage.getItem('rummi-haptics') !== 'off'
@@ -60,6 +63,16 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    localStorage.setItem('rummi-language', language);
+    document.documentElement.lang = language === 'he' ? 'he' : 'en';
+    document.documentElement.dir = language === 'he' ? 'rtl' : 'ltr';
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem('rummi-colorblind', colorBlind ? 'on' : 'off');
+  }, [colorBlind]);
+
+  useEffect(() => {
     localStorage.setItem('rummi-sound', prefs.sound ? 'on' : 'off');
     localStorage.setItem('rummi-haptics', prefs.haptics ? 'on' : 'off');
   }, [prefs]);
@@ -79,12 +92,13 @@ export default function App() {
   const action = (turnAction: TurnAction) => emitAck<{ invalidMeldIds?: string[]; message?: string }>('turn:action', { action: turnAction });
   const simple = (event: string) => () => emitAck<{ invalidMeldIds?: string[]; message?: string }>(event, {});
 
-  if (!room) return <HomeScreen busy={busy} error={error} onCreate={create} onJoin={join} />;
+  if (!room) return <HomeScreen busy={busy} error={error} language={language} onLanguage={setLanguage} onCreate={create} onJoin={join} />;
 
   if (room.status === 'lobby') {
     return <LobbyScreen
       state={room}
       deviceId={deviceId}
+      language={language}
       onAddLocal={(name) => void emitAck('player:add-local', { name })}
       onAddAi={(name: string, level: AiLevel) => void emitAck('player:add-ai', { name, level })}
       onRemove={(playerId) => void emitAck('player:remove', { playerId })}
@@ -92,7 +106,7 @@ export default function App() {
     />;
   }
 
-  if (room.status === 'finished') return <ResultsScreen state={room} isHost={room.hostDeviceId === deviceId} onRematch={() => void emitAck('game:lobby', {})} />;
+  if (room.status === 'finished') return <ResultsScreen state={room} isHost={room.hostDeviceId === deviceId} language={language} onRematch={() => void emitAck('game:lobby', {})} />;
 
   return <>
     <GameScreen
@@ -101,8 +115,11 @@ export default function App() {
       deviceId={deviceId}
       theme={theme}
       prefs={prefs}
+      language={language}
+      colorBlind={colorBlind}
       onAction={action}
       onUndo={simple('turn:undo')}
+      onRedo={simple('turn:redo')}
       onReset={simple('turn:reset')}
       onDraw={simple('turn:draw')}
       onEnd={simple('turn:end')}
@@ -115,9 +132,13 @@ export default function App() {
       open={settingsOpen}
       theme={theme}
       prefs={prefs}
+      language={language}
+      colorBlind={colorBlind}
       isHost={room.hostDeviceId === deviceId}
       onTheme={setTheme}
       onPrefs={setPrefs}
+      onLanguage={setLanguage}
+      onColorBlind={setColorBlind}
       onRestartGame={() => emitAck('game:restart', {})}
       onNewGame={() => emitAck('game:lobby', {})}
       onClose={() => setSettingsOpen(false)}

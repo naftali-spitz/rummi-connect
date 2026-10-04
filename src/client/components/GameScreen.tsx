@@ -5,6 +5,7 @@ import type { DeviceState, DragPresence, PublicMeld, PublicRoomState, Tile, Turn
 import { socket } from '../socket';
 import { feedback, type FeedbackPrefs } from '../feedback';
 import type { ThemeName } from './SettingsPanel';
+import { t, type Language } from '../i18n';
 
 interface ActionResult { ok: boolean; error?: string; data?: { invalidMeldIds?: string[]; message?: string } }
 interface Props {
@@ -13,8 +14,11 @@ interface Props {
   deviceId: string;
   theme: ThemeName;
   prefs: FeedbackPrefs;
+  language: Language;
+  colorBlind: boolean;
   onAction: (action: TurnAction) => Promise<ActionResult>;
   onUndo: () => Promise<ActionResult>;
+  onRedo: () => Promise<ActionResult>;
   onReset: () => Promise<ActionResult>;
   onDraw: () => Promise<ActionResult>;
   onEnd: () => Promise<ActionResult>;
@@ -27,9 +31,21 @@ interface Props {
 type Source = { zone: 'rack'; rackIndex: number } | { zone: 'table'; meldId: string; index: number };
 type Selection = { tile: Tile; source: Source };
 type Press = { tile: Tile; source: Source; x: number; y: number; pointerType: string; tailIds: string[]; timer?: number };
-type Drag = { tile: Tile; source: Source; ids: string[]; id: string; public: boolean; lastSent: number };
+type Drag = { tile: Tile; source: Source; ids: string[]; id: string; public: boolean; lastSent: number; pointerType: string };
 
-const symbol: Record<string, string> = { black: '■', blue: '▲', red: '●', orange: '◆', joker: '☺' };
+const symbol: Record<string, string> = { black: '■', blue: '▲', red: '●', orange: '◆' };
+
+function JokerIcon() {
+  return <span className="joker-mark" aria-label="Joker">
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M13 35c4-13 8-20 13-25 2 7 5 12 9 16 4-7 9-12 15-16 1 9 0 18-3 27H17c-2 0-3-1-4-2Z" />
+      <circle cx="23" cy="11" r="4" /><circle cx="51" cy="10" r="4" /><circle cx="12" cy="34" r="4" />
+      <path d="M18 39h29l-3 13H21l-3-13Z" />
+      <circle cx="27" cy="45" r="2" /><circle cx="38" cy="45" r="2" />
+      <path d="M27 49c3 3 7 3 10 0" fill="none" />
+    </svg>
+  </span>;
+}
 
 function TileFace({ tile, className = '', onPointerDown, selected = false, armed = false, data }: { tile: Tile; className?: string; onPointerDown?: React.PointerEventHandler<HTMLDivElement>; selected?: boolean; armed?: boolean; data?: Record<string, string | number> }) {
   return <div
@@ -38,8 +54,7 @@ function TileFace({ tile, className = '', onPointerDown, selected = false, armed
     data-tile-id={tile.id}
     {...Object.fromEntries(Object.entries(data || {}).map(([k, v]) => [`data-${k}`, v]))}
   >
-    <b>{tile.number ?? '☺'}</b>
-    {tile.color !== 'joker' && <i>{symbol[tile.color]}</i>}
+    {tile.color === 'joker' ? <JokerIcon /> : <><b>{tile.number}</b><i>{symbol[tile.color]}</i></>}
   </div>;
 }
 
@@ -51,7 +66,7 @@ function findTableTile(state: PublicRoomState, id: string): Tile | undefined {
   return undefined;
 }
 
-export function GameScreen({ state, deviceState, deviceId, theme, prefs, onAction, onUndo, onReset, onDraw, onEnd, onSort, onOrganize, onReady, onOpenSettings }: Props) {
+export function GameScreen({ state, deviceState, deviceId, theme, prefs, language, colorBlind, onAction, onUndo, onRedo, onReset, onDraw, onEnd, onSort, onOrganize, onReady, onOpenSettings }: Props) {
   const tableRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
@@ -129,20 +144,21 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     const ghost = ghostRef.current;
     const bubble = bubbleRef.current;
     if (ghost) {
-      ghost.style.transform = `translate3d(${x}px, ${y + (pointerType === 'touch' ? -58 : -8)}px, 0)`;
+      ghost.style.transform = `translate3d(${x}px, ${y + (pointerType === 'touch' ? -72 : -12)}px, 0) translate(-50%, -50%)`;
     }
     if (bubble) {
-      bubble.style.transform = `translate3d(${x}px, ${y + (pointerType === 'touch' ? -112 : -62)}px, 0)`;
+      bubble.style.transform = `translate3d(${x}px, ${y + (pointerType === 'touch' ? -84 : -48)}px, 0) translate(-50%, -50%)`;
     }
   };
 
   const startDrag = (event: PointerEvent, press: Press) => {
     const sourceIsTable = press.source.zone === 'table';
     const ids = press.tailIds.length ? press.tailIds : [press.tile.id];
-    const drag: Drag = { tile: press.tile, source: press.source, ids, id: randomUUID(), public: sourceIsTable, lastSent: 0 };
+    const drag: Drag = { tile: press.tile, source: press.source, ids, id: randomUUID(), public: sourceIsTable, lastSent: 0, pointerType: press.pointerType };
     dragRef.current = drag;
     setDragIds(ids);
     setSelection(null);
+    setPreviewTile(null);
     feedback('pickup', prefs);
     positionGhost(event.clientX, event.clientY, press.pointerType);
     sendPresence('start', drag, event.clientX, event.clientY);
@@ -161,6 +177,7 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     const rackSlot = element.closest<HTMLElement>('[data-rack-index]');
     if (rackSlot) { rackSlot.classList.add('snap-hover'); snapElRef.current = rackSlot; return; }
     let tile = element.closest<HTMLElement>('[data-table-tile="true"]');
+    const threshold = pressRef.current?.pointerType === 'touch' ? 72 : 42;
     if (!tile && element.closest('[data-table-canvas="true"]')) {
       let best: { el: HTMLElement; d: number; side: 'before' | 'after' } | null = null;
       for (const candidate of document.querySelectorAll<HTMLElement>('[data-table-tile="true"]')) {
@@ -169,15 +186,13 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
         if (!best || dl < best.d) best = { el:candidate,d:dl,side:'before' };
         if (!best || dr < best.d) best = { el:candidate,d:dr,side:'after' };
       }
-      if (best && best.d <= 34) { tile = best.el; tile.classList.add(best.side === 'before' ? 'snap-before' : 'snap-after'); snapElRef.current = tile; return; }
+      if (best && best.d <= threshold) { tile = best.el; tile.classList.add(best.side === 'before' ? 'snap-before' : 'snap-after'); snapElRef.current = tile; return; }
     }
     if (tile) {
       const r=tile.getBoundingClientRect();
       tile.classList.add(x < r.left+r.width/2 ? 'snap-before' : 'snap-after');
       snapElRef.current=tile; return;
     }
-    const meld = element.closest<HTMLElement>('[data-meld-id]');
-    if (meld) { meld.classList.add('snap-hover'); snapElRef.current=meld; return; }
     if (element.closest('[data-table-canvas="true"]')) {
       const hint=newMeldRef.current; if(hint){hint.style.left=`${x}px`;hint.style.top=`${y}px`;hint.classList.add('show');}
     }
@@ -187,7 +202,7 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     const press = pressRef.current;
     if (!press) return;
     const distance = Math.hypot(event.clientX - press.x, event.clientY - press.y);
-    if (!dragRef.current && distance > 8) {
+    if (!dragRef.current && distance > (press.pointerType === 'touch' ? 6 : 8)) {
       if (press.timer) window.clearTimeout(press.timer);
       startDrag(event, press);
     }
@@ -206,14 +221,14 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     const result = await onAction(action);
     if (!result.ok) {
       feedback('invalid', prefs);
-      showToast(result.error || 'That move is not available');
+      showToast(result.error || t(language, 'moveUnavailable'));
     } else {
       feedback('drop', prefs);
       setInvalidMelds([]);
     }
   };
 
-  const nearestTableDestination = (x: number, y: number): { meldId: string; index: number } | null => {
+  const nearestTableDestination = (x: number, y: number, threshold: number): { meldId: string; index: number } | null => {
     let best: { meldId: string; index: number; distance: number } | null = null;
     const tiles = Array.from(document.querySelectorAll<HTMLElement>('[data-table-tile="true"]'));
     for (const el of tiles) {
@@ -226,21 +241,32 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
       if (!best || leftD < best.distance) best = { meldId, index: idx, distance: leftD };
       if (!best || rightD < best.distance) best = { meldId, index: idx + 1, distance: rightD };
     }
-    if (best && best.distance <= 34) return { meldId: best.meldId, index: best.index };
+    if (best && best.distance <= threshold) return { meldId: best.meldId, index: best.index };
     return null;
+  };
+
+  const nearestRackDestination = (x: number, y: number, threshold: number): number | null => {
+    let best: { index: number; distance: number } | null = null;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-rack-index]')) {
+      const rect = el.getBoundingClientRect();
+      const distance = Math.hypot(x - (rect.left + rect.width / 2), y - (rect.top + rect.height / 2));
+      if (!best || distance < best.distance) best = { index: Number(el.dataset.rackIndex), distance };
+    }
+    return best && best.distance <= threshold ? best.index : null;
   };
 
   const buildDropAction = (drag: Drag, x: number, y: number): TurnAction | null => {
     const element = document.elementFromPoint(x, y) as HTMLElement | null;
     if (!element) return null;
     const rackSlot = element.closest<HTMLElement>('[data-rack-index]');
+    const rackPanel = element.closest<HTMLElement>('.rack-panel');
     const targetTile = element.closest<HTMLElement>('[data-table-tile="true"]');
     const targetMeld = element.closest<HTMLElement>('[data-meld-id]');
     const canvas = element.closest<HTMLElement>('[data-table-canvas="true"]');
 
-    if (rackSlot) {
-      const targetIndex = Number(rackSlot.dataset.rackIndex);
-      if (drag.ids.length > 1) return null;
+    if (rackSlot || rackPanel) {
+      const targetIndex = rackSlot ? Number(rackSlot.dataset.rackIndex) : nearestRackDestination(x, y, drag.pointerType === 'touch' ? 76 : 42);
+      if (targetIndex === null || drag.ids.length > 1) return null;
       if (drag.source.zone === 'rack') return { type: 'RACK_REORDER', tileId: drag.tile.id, targetIndex };
       return { type: 'TABLE_TO_RACK', tileId: drag.tile.id, sourceMeldId: drag.source.meldId, targetIndex };
     }
@@ -257,7 +283,7 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
       const meld = state.table.find((m) => m.id === targetMeldId);
       targetIndex = meld?.tiles.length ?? 0;
     } else if (canvas) {
-      const near = nearestTableDestination(x, y);
+      const near = nearestTableDestination(x, y, drag.pointerType === 'touch' ? 72 : 42);
       if (near) { targetMeldId = near.meldId; targetIndex = near.index; }
     } else {
       return null;
@@ -385,14 +411,14 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     const r = await onEnd();
     if (!r.ok) {
       feedback('invalid', prefs);
-      showToast(r.error || 'The table is not valid yet');
+      showToast(r.error || t(language, 'invalidTable'));
       setInvalidMelds(r.data?.invalidMeldIds || []);
     } else feedback('success', prefs);
   };
 
   const doDraw = async () => {
     const r = await onDraw();
-    if (!r.ok) { feedback('invalid', prefs); showToast(r.error || 'Unable to draw'); }
+    if (!r.ok) { feedback('invalid', prefs); showToast(r.error || t(language, 'drawFail')); }
     else feedback('draw', prefs);
   };
 
@@ -401,14 +427,14 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
   const liftedIds = [...dragIds, ...remoteDraggedIds];
   const publicRackCount = myPrivatePlayer?.rackCount ?? 0;
 
-  return <main className={`game-shell theme-${theme} ${isDisplay ? 'display-mode' : ''}`}>
+  return <main className={`game-shell theme-${theme} ${isDisplay ? 'display-mode' : ''} ${colorBlind ? 'colorblind-mode' : ''} ${language === 'he' ? 'ui-he' : ''}`}>
     <header className="game-hud">
       <div className="hud-players">
         {state.players.map((p) => <span key={p.id} className={`player-chip ${p.id === state.currentPlayerId ? 'current' : ''} ${p.id === privateTurn?.playerId ? 'me' : ''}`}>
           {p.name}<b>{p.rackCount}</b>
         </span>)}
       </div>
-      <span className="pool-chip">Pool {state.poolCount}</span>
+      <span className="pool-chip">{t(language, 'pool')} {state.poolCount}</span>
       <button className="hud-icon" onClick={onOpenSettings}>⚙</button>
     </header>
 
@@ -425,9 +451,9 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
         </div>;
       })}
 
-      {state.table.length === 0 && <div className="empty-table-hint">Play your first meld here</div>}
-      <div ref={newMeldRef} className="new-meld-hint">New meld</div>
-      <div className="turn-badge">{current ? `${current.name}'s turn` : 'Table'}</div>
+      {state.table.length === 0 && <div className="empty-table-hint">{t(language, 'firstMeld')}</div>}
+      <div ref={newMeldRef} className="new-meld-hint">{t(language, 'newMeld')}</div>
+      <div className="turn-badge">{current ? t(language, 'turn', { name: current.name }) : t(language, 'table')}</div>
     </section>
 
     {!isDisplay && <section className={`rack-panel ${canAct ? 'active-turn' : ''}`}>
@@ -437,19 +463,20 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
         </div>)}
       </div>
       <div className="rack-controls">
-        <button disabled={!canAct} onClick={async () => { const r = await onUndo(); if (!r.ok) showToast(r.error || 'Nothing to undo'); }}>Undo</button>
-        <button disabled={!canAct} onClick={async () => { const r = await onReset(); if (!r.ok) showToast(r.error || 'Unable to reset'); }}>Reset</button>
-        <button disabled={!canAct} onClick={async () => { const r = await onOrganize(); if (!r.ok) showToast(r.error || 'Unable to organize'); }}>Organize</button>
-        <button onClick={async () => { const r = await onSort('number'); if (!r.ok) showToast(r.error || 'Unable to sort'); }}>123</button>
-        <button onClick={async () => { const r = await onSort('color'); if (!r.ok) showToast(r.error || 'Unable to sort'); }}>Color</button>
+        <button className="undo-btn" disabled={!canAct} onClick={async () => { const r = await onUndo(); if (!r.ok) showToast(r.error || t(language, 'nothingUndo')); }}>{t(language, 'undo')}</button>
+        <button className="redo-btn" disabled={!canAct} onClick={async () => { const r = await onRedo(); if (!r.ok) showToast(r.error || t(language, 'nothingRedo')); }}>{t(language, 'redo')}</button>
+        <button className="reset-btn" disabled={!canAct} onClick={async () => { const r = await onReset(); if (!r.ok) showToast(r.error || t(language, 'resetFail')); }}>{t(language, 'reset')}</button>
+        <button className="organize-btn" disabled={!canAct} onClick={async () => { const r = await onOrganize(); if (!r.ok) showToast(r.error || t(language, 'organizeFail')); }}>{t(language, 'organize')}</button>
+        <button className="sort-number-btn" onClick={async () => { const r = await onSort('number'); if (!r.ok) showToast(r.error || t(language, 'sortFail')); }}>123</button>
+        <button className="sort-color-btn" onClick={async () => { const r = await onSort('color'); if (!r.ok) showToast(r.error || t(language, 'sortFail')); }}>{t(language, 'color')}</button>
         <span className="rack-spacer" />
-        {privateTurn && <span className="rack-owner">{myPrivatePlayer?.name || 'Your rack'} · {publicRackCount}</span>}
-        <button className="draw-btn" disabled={!canAct} onClick={() => void doDraw()}>Draw</button>
-        <button className="done-btn" disabled={!canAct} onClick={() => void doEnd()}>Done</button>
+        {privateTurn && <span className="rack-owner">{myPrivatePlayer?.name || t(language, 'yourRack')} · {publicRackCount}</span>}
+        <button className="draw-btn" disabled={!canAct} onClick={() => void doDraw()}>{t(language, 'draw')}</button>
+        <button className="done-btn" disabled={!canAct} onClick={() => void doEnd()}>{t(language, 'done')}</button>
       </div>
     </section>}
 
-    {selection && canSplit && <div className="selection-tools"><button onClick={splitAfter}>Split after</button><button onClick={() => setSelection(null)}>Cancel</button></div>}
+    {selection && canSplit && <div className="selection-tools"><button onClick={splitAfter}>{t(language, 'splitAfter')}</button><button onClick={() => setSelection(null)}>{t(language, 'cancel')}</button></div>}
 
     <div ref={ghostRef} className={`drag-ghost ${ghostTiles.length ? 'show' : ''}`}>
       {ghostTiles.map((tile) => <TileFace key={tile.id} tile={tile} />)}
@@ -457,7 +484,7 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, onActio
     <div ref={bubbleRef} className={`touch-bubble ${previewTile ? 'show' : ''}`}>{previewTile && <TileFace tile={previewTile} />}</div>
 
     {deviceState?.needsReady && <div className="handoff-overlay">
-      <div className="handoff-card"><span>Pass the device to</span><h1>{current?.name}</h1><p>The rack stays hidden until they're ready.</p><button className="primary big" onClick={() => void onReady()}>I'm ready</button></div>
+      <div className="handoff-card"><span>{t(language, 'passDevice')}</span><h1>{current?.name}</h1><p>{t(language, 'rackHidden')}</p><button className="primary big" onClick={() => void onReady()}>{t(language, 'imReady')}</button></div>
     </div>}
 
     {toast && <div className="toast on">{toast}</div>}

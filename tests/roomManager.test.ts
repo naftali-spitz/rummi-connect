@@ -64,6 +64,29 @@ describe('room manager', () => {
     expect(room.players.map((p) => p.rack.filter(Boolean).length)).toEqual([0, 0]);
   });
 
+  it('undoes and redoes a turn action and clears redo after a new move', () => {
+    const { manager: m } = manager();
+    const created = m.createRoom('host', 'Host').data!;
+    m.joinRoom(created.roomCode, 'remote', 'playing', 'Remote');
+    expect(m.startGame(created.roomCode, created.deviceId).ok).toBe(true);
+    const room = m.getRoom(created.roomCode)!;
+    const original = [...room.turn!.rack];
+    const tileId = room.turn!.rack.find((id): id is string => Boolean(id))!;
+
+    expect(m.applyAction(created.roomCode, created.deviceId, { type: 'RACK_REORDER', tileId, targetIndex: 20 }).ok).toBe(true);
+    const moved = [...room.turn!.rack];
+    expect(moved).not.toEqual(original);
+
+    expect(m.undo(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(room.turn!.rack).toEqual(original);
+    expect(m.redo(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(room.turn!.rack).toEqual(moved);
+
+    expect(m.undo(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(m.applyAction(created.roomCode, created.deviceId, { type: 'RACK_REORDER', tileId, targetIndex: 21 }).ok).toBe(true);
+    expect(m.redo(created.roomCode, created.deviceId).ok).toBe(false);
+  });
+
   it('accepts a deterministic 33-point opening run', () => {
     const { manager: m } = manager();
     const created = m.createRoom('a', 'A').data!;
