@@ -293,11 +293,11 @@ html[dir="rtl"] .room-code,html[dir="rtl"] .room-code-input{direction:ltr}
   .turn-badge{font-size:11px;bottom:6px;left:6px}
   .rack-panel{max-height:45dvh;padding:6px 6px max(6px,env(safe-area-inset-bottom));overflow:hidden}
   .rack-grid{
-    grid-template-columns:none;
+    grid-template-columns:repeat(14,var(--tw));
     grid-template-rows:repeat(2,var(--th));
     grid-auto-columns:var(--tw);
     grid-auto-rows:var(--th);
-    grid-auto-flow:column;
+    grid-auto-flow:row;
     justify-content:start;
     align-content:start;
     min-height:calc(var(--th)*2 + 7px);
