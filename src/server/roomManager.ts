@@ -592,8 +592,10 @@ export class RoomManager {
     });
     const target = Array.from({ length: Math.max(rack.length, 28) }, () => null) as RackSlots;
     ids.forEach((id, i) => { target[i] = id; });
-    if (room.status === 'playing' && room.turn?.playerId === player.id) room.turn.rack = target;
-    else player.rack = target;
+    if (room.status === 'playing' && room.turn?.playerId === player.id) {
+      room.turn.rack = target;
+      room.turn.future = [];
+    } else player.rack = target;
     this.save(room);
     return { ok: true };
   }
