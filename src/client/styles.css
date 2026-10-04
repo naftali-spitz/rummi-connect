@@ -49,3 +49,178 @@ button.primary{background:#244f48;color:white;box-shadow:0 3px 0 #173832}.big{mi
 @media (max-width:650px){.lobby-columns{grid-template-columns:1fr}.join-panel{display:none}.home-screen,.lobby-screen,.results-screen{padding:10px}.lobby-card{padding:16px;border-radius:18px}.game-hud{font-size:10px}.player-chip{padding-inline:6px}.pool-chip{display:none}.rack-owner{display:none}.settings-panel{max-height:90dvh;overflow:auto}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.game-tile,.remote-drag,.toast{transition:none!important}}
 .game-tile.snap-before::before,.game-tile.snap-after::after{content:"";position:absolute;top:-4px;bottom:-4px;width:4px;border-radius:4px;background:#8cc1ff;box-shadow:0 0 0 3px rgba(93,157,235,.22);z-index:8}.game-tile.snap-before::before{left:-5px}.game-tile.snap-after::after{right:-5px}.meld.snap-hover{border-color:#8cc1ff;background:rgba(135,190,255,.16)}.rack-slot.snap-hover{outline:3px solid rgba(92,156,236,.48);background:rgba(93,157,235,.14)}.new-meld-hint{position:fixed;z-index:18;display:none;transform:translate(-50%,-50%);padding:7px 10px;border-radius:9px;border:2px dashed #a8d2ff;background:rgba(20,43,55,.78);color:#fff;font-size:11px;font-weight:900;pointer-events:none}.new-meld-hint.show{display:block}
+
+
+/* Desktop / laptop responsive layout */
+@media (min-width:900px){
+  .game-shell{
+    --tw:42px;
+    --th:58px;
+    --gap:4px;
+  }
+
+  .game-hud{
+    min-height:38px;
+    padding-inline:12px;
+    gap:8px;
+  }
+
+  .game-shell{
+    grid-template-rows:38px minmax(0,1fr) auto;
+  }
+
+  .player-chip,.pool-chip{
+    font-size:12px;
+    padding:4px 10px;
+  }
+
+  .player-chip b{font-size:11px}
+
+  .table-surface{
+    padding:16px 18px;
+  }
+
+  .meld-wrap{
+    gap:14px 16px;
+    max-width:1600px;
+    margin:0 auto;
+    padding-bottom:68px;
+  }
+
+  .meld{
+    padding:6px 7px;
+    border-radius:12px;
+    min-height:calc(var(--th) + 12px);
+  }
+
+  .rack-panel{
+    padding:8px 14px 10px;
+    max-height:34dvh;
+  }
+
+  .rack-grid{
+    grid-template-columns:repeat(14,var(--tw));
+    width:max-content;
+    max-width:100%;
+    margin:0 auto;
+    gap:7px 5px;
+    min-height:calc(var(--th)*2 + 7px);
+    padding:7px;
+  }
+
+  .rack-controls{
+    width:min(980px,100%);
+    margin:0 auto;
+    padding-top:7px;
+    gap:6px;
+  }
+
+  .rack-controls button{
+    min-height:36px;
+    padding:6px 12px;
+  }
+
+  .rack-owner{
+    font-size:12px;
+  }
+
+  .turn-badge{
+    left:14px;
+    bottom:12px;
+    font-size:12px;
+    padding:7px 11px;
+  }
+
+  .selection-tools{
+    bottom:calc(154px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Large desktop monitors: grow the pieces a little, but keep the board compact. */
+@media (min-width:1500px) and (min-height:760px){
+  .game-shell{
+    --tw:46px;
+    --th:64px;
+    --gap:5px;
+  }
+
+  .table-surface{
+    padding:20px 24px;
+  }
+
+  .rack-panel{
+    padding-inline:22px;
+  }
+
+  .meld-wrap{
+    gap:16px 20px;
+  }
+}
+
+/* Short laptop windows need table height more than rack width. */
+@media (min-width:900px) and (max-height:680px){
+  .game-shell:not(.display-mode){
+    grid-template-areas:"hud hud" "table rack";
+    grid-template-rows:38px minmax(0,1fr);
+    grid-template-columns:minmax(0,1fr) minmax(224px,24vw);
+  }
+
+  .rack-panel{
+    max-height:none;
+    height:100%;
+    padding:9px;
+    overflow:auto;
+    box-shadow:-5px 0 18px rgba(0,0,0,.25);
+  }
+
+  .rack-grid{
+    grid-template-columns:repeat(4,var(--tw));
+    grid-auto-rows:var(--th);
+    width:max-content;
+    min-height:0;
+    margin:0 auto;
+    align-content:start;
+  }
+
+  .rack-controls{
+    width:100%;
+    flex-wrap:wrap;
+  }
+
+  .rack-controls button{
+    flex:1 1 calc(33.333% - 6px);
+    min-width:58px;
+  }
+
+  .rack-spacer{
+    display:none;
+  }
+
+  .rack-owner{
+    width:100%;
+    text-align:center;
+    order:-1;
+  }
+
+  .selection-tools{
+    bottom:14px;
+  }
+
+  .display-mode{
+    grid-template-areas:"hud" "table";
+    grid-template-rows:38px minmax(0,1fr);
+  }
+}
+
+/* Desktop mouse affordances without changing touch behavior. */
+@media (hover:hover) and (pointer:fine){
+  .game-tile:hover{
+    transform:translateY(-2px);
+    box-shadow:0 2px 0 color-mix(in srgb,var(--tileEdge) 82%,#776d58),0 7px 12px rgba(0,0,0,.27);
+  }
+
+  .rack-controls button:hover:not(:disabled),
+  .hud-icon:hover{
+    filter:brightness(1.08);
+  }
+}
