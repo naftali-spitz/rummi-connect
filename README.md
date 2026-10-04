@@ -10,7 +10,7 @@ A touch-first, local-network Rummikub-style game for phones, tablets, laptops an
 - 30-point opening meld
 - Temporary invalid table states during a turn
 - Server-authoritative End Turn validation
-- Draw, Undo, Reset Turn and deterministic Organize Table
+- Draw, Undo, Redo, Reset Turn and deterministic Organize Table
 - Free-form rack slots plus Number / Color sorting
 - Drag and tap-to-move interaction
 - Long-press a table tile, then drag, to move the rest of that run/group as a tail
@@ -24,6 +24,8 @@ A touch-first, local-network Rummikub-style game for phones, tablets, laptops an
 - Easy, Normal, Hard and Expert AI levels using progressively larger search budgets
 - AI turns animate as a sequence of live table changes
 - Four themes: Classic Tabletop, Soft Modern, Minimal Premium, Contemporary Playful
+- English and Hebrew UI with RTL support
+- Per-device color-blind tile mode with stronger shape/border cues
 - Sound / haptic preferences and fullscreen control
 - SQLite persistence using Node's built-in `node:sqlite`
 - Persistent device tokens and reconnect
@@ -300,7 +302,6 @@ The LAN build intentionally has no account/login system. If you later expose it 
 
 Other natural follow-ups:
 
-- Hebrew translation and RTL UI
 - stronger Expert AI search
 - optional house-rule profiles
 - game history / replay
