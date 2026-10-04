@@ -9,6 +9,8 @@ interface Props {
   prefs: FeedbackPrefs;
   language: Language;
   colorBlind: boolean;
+  colorBlindAvailable: boolean;
+  colorBlindPlayerName?: string;
   isHost: boolean;
   onTheme: (theme: ThemeName) => void;
   onPrefs: (prefs: FeedbackPrefs) => void;
@@ -19,7 +21,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function SettingsPanel({ open, theme, prefs, language, colorBlind, isHost, onTheme, onPrefs, onLanguage, onColorBlind, onRestartGame, onNewGame, onClose }: Props) {
+export function SettingsPanel({ open, theme, prefs, language, colorBlind, colorBlindAvailable, colorBlindPlayerName, isHost, onTheme, onPrefs, onLanguage, onColorBlind, onRestartGame, onNewGame, onClose }: Props) {
   if (!open) return null;
 
   const restartGame = async () => {
@@ -54,7 +56,7 @@ export function SettingsPanel({ open, theme, prefs, language, colorBlind, isHost
       </div>
       <label className="toggle-row"><span>{t(language, 'sound')}</span><input type="checkbox" checked={prefs.sound} onChange={(e) => onPrefs({ ...prefs, sound: e.target.checked })} /></label>
       <label className="toggle-row"><span>{t(language, 'haptics')}</span><input type="checkbox" checked={prefs.haptics} onChange={(e) => onPrefs({ ...prefs, haptics: e.target.checked })} /></label>
-      <label className="toggle-row colorblind-toggle"><span><strong>{t(language, 'colorBlind')}</strong><small>{t(language, 'colorBlindHelp')}</small></span><input type="checkbox" checked={colorBlind} onChange={(e) => onColorBlind(e.target.checked)} /></label>
+      {colorBlindAvailable && <label className="toggle-row colorblind-toggle"><span><strong>{t(language, 'colorBlind')}</strong><small>{t(language, 'colorBlindHelp', { name: colorBlindPlayerName || '' })}</small></span><input type="checkbox" checked={colorBlind} onChange={(e) => onColorBlind(e.target.checked)} /></label>}
       <button onClick={() => document.documentElement.requestFullscreen?.()}>{t(language, 'fullscreen')}</button>
 
       {isHost && <>
