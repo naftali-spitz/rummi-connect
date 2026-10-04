@@ -257,6 +257,14 @@ io.on('connection', (socket) => {
     ack?.(result);
   });
 
+  socket.on('turn:redo', (_payload: unknown, ack?: (v: unknown) => void) => {
+    const ctx = contexts.get(socket.id);
+    if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
+    const result = manager.redo(ctx.roomCode, ctx.deviceId);
+    if (result.ok) broadcastRoom(ctx.roomCode);
+    ack?.(result);
+  });
+
   socket.on('turn:reset', (_payload: unknown, ack?: (v: unknown) => void) => {
     const ctx = contexts.get(socket.id);
     if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
