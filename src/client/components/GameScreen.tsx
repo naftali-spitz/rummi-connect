@@ -198,6 +198,22 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, languag
     }
   };
 
+  const autoScrollTable = (x: number, y: number) => {
+    const table = tableRef.current;
+    if (!table) return;
+    const rect = table.getBoundingClientRect();
+    const edge = 52;
+    const maxStep = 18;
+    const axisStep = (position: number, start: number, end: number) => {
+      if (position < start + edge) return -Math.ceil(maxStep * Math.min(1, (start + edge - position) / edge));
+      if (position > end - edge) return Math.ceil(maxStep * Math.min(1, (position - (end - edge)) / edge));
+      return 0;
+    };
+    const left = axisStep(x, rect.left, rect.right);
+    const top = axisStep(y, rect.top, rect.bottom);
+    if (left || top) table.scrollBy(left, top);
+  };
+
   const pointerMove = (event: PointerEvent) => {
     const press = pressRef.current;
     if (!press) return;
@@ -210,6 +226,7 @@ export function GameScreen({ state, deviceState, deviceId, theme, prefs, languag
     if (!drag) return;
     event.preventDefault();
     positionGhost(event.clientX, event.clientY, press.pointerType);
+    autoScrollTable(event.clientX, event.clientY);
     updateSnapPreview(event.clientX, event.clientY);
     if (drag.public && performance.now() - drag.lastSent >= 75) {
       drag.lastSent = performance.now();
