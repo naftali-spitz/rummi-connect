@@ -25,6 +25,7 @@ export interface Player {
   rack: RackSlots;
   initialMeldCompleted: boolean;
   score: number;
+  colorBlind: boolean;
 }
 
 export interface Device {
@@ -99,6 +100,7 @@ export interface PrivateTurnState {
   rack: Array<Tile | null>;
   canAct: boolean;
   canManipulateTable: boolean;
+  colorBlind: boolean;
 }
 
 export interface DeviceState {
