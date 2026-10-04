@@ -182,6 +182,17 @@ io.on('connection', (socket) => {
     ack?.(result);
   });
 
+  socket.on('player:color-blind', (payload: { playerId: string; enabled: boolean }, ack?: (v: unknown) => void) => {
+    const ctx = contexts.get(socket.id);
+    if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
+    if (!payload || typeof payload.playerId !== 'string' || typeof payload.enabled !== 'boolean') {
+      return ack?.({ ok: false, error: 'Invalid preference' });
+    }
+    const result = manager.setPlayerColorBlind(ctx.roomCode, ctx.deviceId, payload.playerId, payload.enabled);
+    if (result.ok) broadcastRoom(ctx.roomCode);
+    ack?.(result);
+  });
+
   socket.on('game:lobby', (_payload: unknown, ack?: (v: unknown) => void) => {
     const ctx = contexts.get(socket.id);
     if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
