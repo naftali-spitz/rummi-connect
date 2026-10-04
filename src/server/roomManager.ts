@@ -220,7 +220,18 @@ export class RoomManager {
     if (room.hostDeviceId !== requesterDeviceId) return { ok: false, error: 'Only the host can start the game' };
     if (room.status !== 'lobby') return { ok: false, error: 'Game already started' };
     if (room.players.length < 2) return { ok: false, error: 'At least 2 players are required' };
+    return this.startFreshGame(room);
+  }
 
+  restartGame(code: string, requesterDeviceId: string): ManagerResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'Room not found' };
+    if (room.hostDeviceId !== requesterDeviceId) return { ok: false, error: 'Only the host can restart the game' };
+    if (room.players.length < 2) return { ok: false, error: 'At least 2 players are required' };
+    return this.startFreshGame(room);
+  }
+
+  private startFreshGame(room: PersistedRoom): ManagerResult {
     room.tiles = createTileSet();
     room.pool = shuffle(room.tiles.map((t) => t.id));
     room.table = [];
@@ -487,8 +498,7 @@ export class RoomManager {
   returnToLobby(code: string, requesterDeviceId: string): ManagerResult {
     const room = this.rooms.get(code);
     if (!room) return { ok: false, error: 'Room not found' };
-    if (room.hostDeviceId !== requesterDeviceId) return { ok: false, error: 'Only the host can start a rematch' };
-    if (room.status !== 'finished') return { ok: false, error: 'The current game is not finished' };
+    if (room.hostDeviceId !== requesterDeviceId) return { ok: false, error: 'Only the host can return to the lobby' };
     room.status = 'lobby';
     room.table = [];
     room.pool = [];
