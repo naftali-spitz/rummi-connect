@@ -296,7 +296,7 @@ html[dir="rtl"] .room-code,html[dir="rtl"] .room-code-input{direction:ltr}
   }
   .table-surface::-webkit-scrollbar{width:5px;height:5px}
   .table-surface::-webkit-scrollbar-thumb{background:rgba(255,255,255,.32);border-radius:999px}
-  .meld-wrap{min-width:100%;width:max-content;max-width:none}
+  .meld-wrap{min-width:100%;width:100%;max-width:none}
 
   .meld-wrap{gap:10px 9px;padding-bottom:48px}
   .meld{padding:5px;min-height:calc(var(--th) + 10px)}
