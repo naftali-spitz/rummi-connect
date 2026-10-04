@@ -25,7 +25,7 @@ A touch-first, local-network Rummikub-style game for phones, tablets, laptops an
 - AI turns animate as a sequence of live table changes
 - Four themes: Classic Tabletop, Soft Modern, Minimal Premium, Contemporary Playful
 - English and Hebrew UI with RTL support
-- Per-device color-blind tile mode with stronger shape/border cues
+- Per-player color-blind tile mode with stronger shape/border cues, including pass-and-play handoffs
 - Sound / haptic preferences and fullscreen control
 - SQLite persistence using Node's built-in `node:sqlite`
 - Persistent device tokens and reconnect
