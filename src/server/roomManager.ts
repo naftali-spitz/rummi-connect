@@ -67,6 +67,9 @@ export class RoomManager {
   constructor(private storage: RoomStorage) {
     for (const room of storage.loadAll()) {
       if (room.turn && !Array.isArray(room.turn.future)) room.turn.future = [];
+      for (const player of room.players) {
+        if (typeof player.colorBlind !== 'boolean') player.colorBlind = false;
+      }
       this.rooms.set(room.code, room);
       this.readyDevices.set(room.code, new Set());
     }
@@ -101,7 +104,8 @@ export class RoomManager {
       deviceId,
       rack: blankRack(),
       initialMeldCompleted: false,
-      score: 0
+      score: 0,
+      colorBlind: false
     };
   }
 
@@ -193,7 +197,8 @@ export class RoomManager {
       aiLevel,
       rack: blankRack(),
       initialMeldCompleted: false,
-      score: 0
+      score: 0,
+      colorBlind: false
     };
     room.players.push(player);
     this.save(room);
@@ -211,6 +216,17 @@ export class RoomManager {
     }
     room.players = room.players.filter((p) => p.id !== playerId);
     for (const device of room.devices) device.playerIds = device.playerIds.filter((id) => id !== playerId);
+    this.save(room);
+    return { ok: true };
+  }
+
+  setPlayerColorBlind(code: string, requesterDeviceId: string, playerId: string, enabled: boolean): ManagerResult {
+    const room = this.rooms.get(code);
+    if (!room) return { ok: false, error: 'Room not found' };
+    const player = room.players.find((p) => p.id === playerId && p.type === 'human');
+    if (!player) return { ok: false, error: 'Player not found' };
+    if (player.deviceId !== requesterDeviceId) return { ok: false, error: 'You cannot change that player preference' };
+    player.colorBlind = enabled;
     this.save(room);
     return { ok: true };
   }
@@ -650,7 +666,8 @@ export class RoomManager {
         playerId: player.id,
         rack: rack.map((id) => (id ? byId.get(id) ?? null : null)),
         canAct: Boolean(isCurrent),
-        canManipulateTable: Boolean(isCurrent && player.initialMeldCompleted)
+        canManipulateTable: Boolean(isCurrent && player.initialMeldCompleted),
+        colorBlind: player.colorBlind
       };
       return state;
     }
@@ -664,7 +681,8 @@ export class RoomManager {
       playerId: current.id,
       rack: room.turn.rack.map((id) => (id ? byId.get(id) ?? null : null)),
       canAct: true,
-      canManipulateTable: current.initialMeldCompleted
+      canManipulateTable: current.initialMeldCompleted,
+      colorBlind: current.colorBlind
     };
     return state;
   }

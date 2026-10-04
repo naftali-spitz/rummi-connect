@@ -21,7 +21,6 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeName>(() => (localStorage.getItem('rummi-theme') as ThemeName) || 'soft');
   const [language, setLanguage] = useState<Language>(() => localStorage.getItem('rummi-language') === 'he' ? 'he' : 'en');
-  const [colorBlind, setColorBlind] = useState(() => localStorage.getItem('rummi-colorblind') === 'on');
   const [prefs, setPrefs] = useState<FeedbackPrefs>(() => ({
     sound: localStorage.getItem('rummi-sound') !== 'off',
     haptics: localStorage.getItem('rummi-haptics') !== 'off'
@@ -69,10 +68,6 @@ export default function App() {
   }, [language]);
 
   useEffect(() => {
-    localStorage.setItem('rummi-colorblind', colorBlind ? 'on' : 'off');
-  }, [colorBlind]);
-
-  useEffect(() => {
     localStorage.setItem('rummi-sound', prefs.sound ? 'on' : 'off');
     localStorage.setItem('rummi-haptics', prefs.haptics ? 'on' : 'off');
   }, [prefs]);
@@ -91,6 +86,13 @@ export default function App() {
 
   const action = (turnAction: TurnAction) => emitAck<{ invalidMeldIds?: string[]; message?: string }>('turn:action', { action: turnAction });
   const simple = (event: string) => () => emitAck<{ invalidMeldIds?: string[]; message?: string }>(event, {});
+  const privatePlayerId = deviceState?.privateTurn?.playerId;
+  const colorBlind = Boolean(deviceState?.privateTurn?.colorBlind);
+  const colorBlindPlayerName = privatePlayerId ? room?.players.find((p) => p.id === privatePlayerId)?.name : undefined;
+  const setPlayerColorBlind = (enabled: boolean) => {
+    if (!privatePlayerId) return;
+    void emitAck('player:color-blind', { playerId: privatePlayerId, enabled });
+  };
 
   if (!room) return <HomeScreen busy={busy} error={error} language={language} onLanguage={setLanguage} onCreate={create} onJoin={join} />;
 
@@ -134,11 +136,13 @@ export default function App() {
       prefs={prefs}
       language={language}
       colorBlind={colorBlind}
+      colorBlindAvailable={Boolean(privatePlayerId)}
+      colorBlindPlayerName={colorBlindPlayerName}
       isHost={room.hostDeviceId === deviceId}
       onTheme={setTheme}
       onPrefs={setPrefs}
       onLanguage={setLanguage}
-      onColorBlind={setColorBlind}
+      onColorBlind={setPlayerColorBlind}
       onRestartGame={() => emitAck('game:restart', {})}
       onNewGame={() => emitAck('game:lobby', {})}
       onClose={() => setSettingsOpen(false)}

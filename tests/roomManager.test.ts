@@ -32,6 +32,31 @@ describe('room manager', () => {
     expect(m.deviceState(created.roomCode, created.deviceId)?.privateTurn?.rack.filter(Boolean)).toHaveLength(14);
   });
 
+  it('keeps color-blind mode per player on a shared device', () => {
+    const { manager: m } = manager();
+    const created = m.createRoom('shared', 'Alice').data!;
+    const bob = m.addLocalPlayer(created.roomCode, created.deviceId, 'Bob').data!;
+
+    expect(m.setPlayerColorBlind(created.roomCode, created.deviceId, created.playerId, true).ok).toBe(true);
+    expect(m.setPlayerColorBlind(created.roomCode, created.deviceId, bob.playerId, false).ok).toBe(true);
+    expect(m.startGame(created.roomCode, created.deviceId).ok).toBe(true);
+
+    expect(m.deviceState(created.roomCode, created.deviceId)?.needsReady).toBe(true);
+    expect(m.markReady(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(m.deviceState(created.roomCode, created.deviceId)?.privateTurn).toMatchObject({
+      playerId: created.playerId,
+      colorBlind: true
+    });
+
+    expect(m.draw(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(m.deviceState(created.roomCode, created.deviceId)?.needsReady).toBe(true);
+    expect(m.markReady(created.roomCode, created.deviceId).ok).toBe(true);
+    expect(m.deviceState(created.roomCode, created.deviceId)?.privateTurn).toMatchObject({
+      playerId: bob.playerId,
+      colorBlind: false
+    });
+  });
+
   it('restarts an active game with the same players and fresh tiles', () => {
     const { manager: m } = manager();
     const created = m.createRoom('host', 'Host').data!;
