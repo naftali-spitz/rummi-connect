@@ -26,6 +26,13 @@ const contexts = new Map<string, { roomCode: string; deviceId: string; token: st
 const aiTimers = new Map<string, NodeJS.Timeout>();
 const dragLastAt = new Map<string, number>();
 
+function clearAiTimer(code: string): void {
+  const timer = aiTimers.get(code);
+  if (!timer) return;
+  clearTimeout(timer);
+  aiTimers.delete(code);
+}
+
 app.use(express.json());
 
 function lanUrls(port = PORT): string[] {
@@ -179,7 +186,22 @@ io.on('connection', (socket) => {
     const ctx = contexts.get(socket.id);
     if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
     const result = manager.returnToLobby(ctx.roomCode, ctx.deviceId);
-    if (result.ok) broadcastRoom(ctx.roomCode);
+    if (result.ok) {
+      clearAiTimer(ctx.roomCode);
+      broadcastRoom(ctx.roomCode);
+    }
+    ack?.(result);
+  });
+
+  socket.on('game:restart', (_payload: unknown, ack?: (v: unknown) => void) => {
+    const ctx = contexts.get(socket.id);
+    if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
+    const result = manager.restartGame(ctx.roomCode, ctx.deviceId);
+    if (result.ok) {
+      clearAiTimer(ctx.roomCode);
+      broadcastRoom(ctx.roomCode);
+      scheduleAi(ctx.roomCode);
+    }
     ack?.(result);
   });
 
@@ -187,8 +209,11 @@ io.on('connection', (socket) => {
     const ctx = contexts.get(socket.id);
     if (!ctx) return ack?.({ ok: false, error: 'Not in a room' });
     const result = manager.startGame(ctx.roomCode, ctx.deviceId);
-    broadcastRoom(ctx.roomCode);
-    scheduleAi(ctx.roomCode);
+    if (result.ok) {
+      clearAiTimer(ctx.roomCode);
+      broadcastRoom(ctx.roomCode);
+      scheduleAi(ctx.roomCode);
+    }
     ack?.(result);
   });
 
