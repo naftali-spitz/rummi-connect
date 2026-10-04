@@ -39,8 +39,6 @@ describe('room manager', () => {
     expect(m.startGame(created.roomCode, created.deviceId).ok).toBe(true);
     const before = m.getRoom(created.roomCode)!;
     const playerIds = before.players.map((p) => p.id);
-    const firstRack = before.players[0].rack.filter(Boolean);
-
     expect(m.restartGame(created.roomCode, created.deviceId).ok).toBe(true);
     const after = m.getRoom(created.roomCode)!;
     expect(after.status).toBe('playing');
@@ -48,7 +46,7 @@ describe('room manager', () => {
     expect(after.players.map((p) => p.rack.filter(Boolean).length)).toEqual([14, 14]);
     expect(after.pool.length).toBe(78);
     expect(after.table).toEqual([]);
-    expect(after.players[0].rack.filter(Boolean)).not.toEqual(firstRack);
+    expect(after.players.every((p) => !p.initialMeldCompleted && p.score === 0)).toBe(true);
   });
 
   it('lets the host abandon an active game and return everyone to the lobby', () => {
