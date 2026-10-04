@@ -66,6 +66,7 @@ export class RoomManager {
 
   constructor(private storage: RoomStorage) {
     for (const room of storage.loadAll()) {
+      if (room.turn && !Array.isArray(room.turn.future)) room.turn.future = [];
       this.rooms.set(room.code, room);
       this.readyDevices.set(room.code, new Set());
     }
@@ -263,7 +264,8 @@ export class RoomManager {
       table: cloneMelds(room.table),
       rack: cloneRack(player.rack),
       originalRackTileIds: rackIds(player.rack),
-      history: []
+      history: [],
+      future: []
     };
     this.readyDevices.set(room.code, new Set());
   }
@@ -356,6 +358,7 @@ export class RoomManager {
     if (!next) return { ok: false, error: 'That move cannot be applied' };
     turn.history.push(before);
     if (turn.history.length > 80) turn.history.shift();
+    turn.future = [];
     turn.table = next.table;
     turn.rack = next.rack;
     this.save(room);
@@ -376,10 +379,28 @@ export class RoomManager {
   }
 
   private undoCurrent(room: PersistedRoom): ManagerResult {
-    const previous = room.turn!.history.pop();
+    const turn = room.turn!;
+    const previous = turn.history.pop();
     if (!previous) return { ok: false, error: 'Nothing to undo' };
-    room.turn!.table = cloneMelds(previous.table);
-    room.turn!.rack = cloneRack(previous.rack);
+    turn.future.push({ table: cloneMelds(turn.table), rack: cloneRack(turn.rack) });
+    if (turn.future.length > 80) turn.future.shift();
+    turn.table = cloneMelds(previous.table);
+    turn.rack = cloneRack(previous.rack);
+    this.save(room);
+    return { ok: true };
+  }
+
+  redo(code: string, deviceId: string): ManagerResult {
+    const room = this.rooms.get(code);
+    if (!room || !room.turn) return { ok: false, error: 'No active turn' };
+    if (!this.actorCanAct(room, deviceId)) return { ok: false, error: 'You cannot act right now' };
+    const turn = room.turn;
+    const next = turn.future.pop();
+    if (!next) return { ok: false, error: 'Nothing to redo' };
+    turn.history.push({ table: cloneMelds(turn.table), rack: cloneRack(turn.rack) });
+    if (turn.history.length > 80) turn.history.shift();
+    turn.table = cloneMelds(next.table);
+    turn.rack = cloneRack(next.rack);
     this.save(room);
     return { ok: true };
   }
@@ -392,6 +413,7 @@ export class RoomManager {
     room.turn.table = cloneMelds(room.table);
     room.turn.rack = cloneRack(current.rack);
     room.turn.history = [];
+    room.turn.future = [];
     this.save(room);
     return { ok: true };
   }
@@ -521,6 +543,7 @@ export class RoomManager {
     if (!this.actorCanAct(room, deviceId)) return { ok: false, error: 'You cannot act right now' };
     const turn = room.turn;
     turn.history.push({ table: cloneMelds(turn.table), rack: cloneRack(turn.rack) });
+    turn.future = [];
     const byId = tileMap(room.tiles);
     const colorOrder = { black: 0, blue: 1, red: 2, orange: 3, joker: 4 } as const;
     turn.table.sort((a, b) => {
